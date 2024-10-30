@@ -1,4 +1,3 @@
-// Variables globales
 const weapons = ["Gladius", "Artemis", "Ultima", "Robins", "Excalibur", "Yoichi"];
 const wpnAtk = [20, 60, 70, 30, 40, 50];
 const bosses = ["Gran Águila", "Dragón del Cielo", "Mago Muerto", "Quimera", "Usurpador del Trono"];
@@ -7,7 +6,6 @@ let bossPower = [];
 let heroAttack;
 let currentBossIndex = 0;
 
-// Variables para almacenar el nombre del héroe, clase y mascota
 let heroName, heroClass, petName;
 
 const dice_roll = () => Math.floor(Math.random() * (12 - 6 + 1)) + 6;
