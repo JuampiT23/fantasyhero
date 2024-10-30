@@ -1,74 +1,144 @@
-const formulario = document.getElementById('formulario-heroe');
-const nombreHeroeInput = document.getElementById('nombre-heroe');
-const puntosAtaqueInput = document.getElementById('puntos-ataque');
-const nombreMascotaInput = document.getElementById('nombre-mascota');
-const mensajeBienvenida = document.getElementById('mensaje-bienvenida');
-const botonSiguiente = document.getElementById('boton-siguiente');
-const encuentro = document.getElementById('encuentro');
+// Variables globales
+const weapons = ["Gladius", "Artemis", "Ultima", "Robins", "Excalibur", "Yoichi"];
+const wpnAtk = [20, 60, 70, 30, 40, 50];
+const bosses = ["Gran Águila", "Dragón del Cielo", "Mago Muerto", "Quimera", "Usurpador del Trono"];
+const bossImages = ["Fields.jpg", "Summit.jpg", "Graveyard.jpg", "Forest.jpg", "Castle.jpg"];
+let bossPower = [];
+let heroAttack;
+let currentBossIndex = 0;
 
-formulario.addEventListener('submit', function(e) {
+// Variables para almacenar el nombre del héroe, clase y mascota
+let heroName, heroClass, petName;
+
+const dice_roll = () => Math.floor(Math.random() * (12 - 6 + 1)) + 6;
+
+const formulario = document.getElementById('formulario-heroe');
+const aventura = document.getElementById('aventura');
+const descripcionAventura = document.getElementById('descripcion-aventura');
+const imagenAventura = document.getElementById('imagen-aventura');
+const opcionesArmas = document.getElementById('opciones-armas');
+
+async function obtenerBossPower() {
+    const maxPokemonId = 898;
+    bossPower = [];
+    for (let i = 0; i < bosses.length; i++) {
+        const randomId = Math.floor(Math.random() * maxPokemonId) + 1;
+        const response = await fetch(`https://pokeapi.co/api/v2/pokemon/${randomId}`);
+        const data = await response.json();
+        const baseStat = data.stats[0].base_stat * 5;
+        bossPower.push(baseStat);
+    }
+}
+
+formulario.addEventListener('submit', async function (e) {
     e.preventDefault();
 
-    const nombreHeroe = nombreHeroeInput.value.trim();
-    const puntosAtaque = parseInt(puntosAtaqueInput.value);
-    const nombreMascota = nombreMascotaInput.value.trim();
+    heroName = document.getElementById('nombre').value.trim();
+    heroClass = document.getElementById('clase').value.trim();
+    petName = document.getElementById('mascota').value.trim();
 
-    if (nombreHeroe && puntosAtaque <= 255 && nombreMascota) {
-        mensajeBienvenida.innerHTML = `<p>¡Tu nombre es ${nombreHeroe}! Recuerdas que estas en una mision, un viaje. Quien te acompaña es ${nombreMascota}, no sabes de donde salio o desde cuando la conoces pero se nota que esta de tu lado.</p>`;
-        
-        botonSiguiente.style.display = 'block';
-    
+    if (heroName && heroClass && petName) {
+        await obtenerBossPower();
+
+        Swal.fire({
+            icon: 'success',
+            title: `Así que eres ${heroName} el ${heroClass}`,
+            text: `Veo que te acompaña ${petName}.`
+        });
+
         formulario.style.display = 'none';
+        descripcionAventura.innerHTML = "Te encuentras en una cueva oscura. Solo hay un camino hacia adelante.";
+        imagenAventura.src = "img/Cueva.jpg";
+        aventura.style.display = 'block';
+
+        iniciarSeleccionArma();
+    }
+});
+
+function iniciarSeleccionArma() {
+    descripcionAventura.innerHTML = "Encuentras 6 cofres en la cueva. Elige un número para abrir un cofre y obtener un arma.";
+    imagenAventura.src = "img/Cueva.jpg";
+    opcionesArmas.innerHTML = '';
+
+    for (let i = 0; i < 6; i++) {
+        const boton = document.createElement('button');
+        boton.classList.add('btn', 'btn-dark', 'mx-2');
+        boton.innerText = i + 1;
+        boton.onclick = () => seleccionarArma(i);
+        opcionesArmas.appendChild(boton);
+    }
+}
+
+function seleccionarArma(indice) {
+    const arma = weapons[indice];
+    heroAttack = wpnAtk[indice];
+
+    Swal.fire({
+        icon: 'info',
+        title: `¡Has encontrado ${arma}!`,
+        text: `Sientes su poder recorrer tu cuerpo.`
+    });
+
+    iniciarEnfrentamiento();
+}
+
+function iniciarEnfrentamiento() {
+    if (currentBossIndex >= bosses.length) {
+        finalizarAventura(`Has derrotado a todos los Guardianes. ${petName} vuelve a su forma original y recuerdas que no eres ${heroClass}, eres el príncipe del reino y por fin has recuperado tu vida junto a la princesa.`);
+        return;
+    }
+
+    const boss = bosses[currentBossIndex];
+    const bossImage = bossImages[currentBossIndex];
+    const bossAtk = bossPower[currentBossIndex];
+
+    descripcionAventura.innerHTML = `Te encuentras con ${boss}. Poder del enemigo: ${bossAtk}.`;
+    imagenAventura.src = `img/${bossImage}`;
+
+    const botonDado = document.createElement('button');
+    botonDado.classList.add('btn', 'btn-primary');
+    botonDado.innerText = "Atacar al enemigo.";
+    botonDado.onclick = () => enfrentarBoss(boss, bossAtk);
+    opcionesArmas.innerHTML = '';
+    opcionesArmas.appendChild(botonDado);
+}
+
+function enfrentarBoss(boss, bossAtk) {
+    const roll = dice_roll();
+    const totalAttack = roll * heroAttack;
+
+    if (totalAttack >= bossAtk) {
+        Swal.fire({
+            icon: 'success',
+            title: "¡Victoria!",
+            text: `Has derrotado a ${boss}.`
+        });
+        currentBossIndex++;
+        iniciarEnfrentamiento();
     } else {
-        mensajeBienvenida.innerHTML = '<p class="text-danger">Por favor, completa correctamente todos los campos.</p>';
+        finalizarAventura(`Has sido derrotado por ${boss}. Sientes que tu cuerpo cae, pero tu alma permanece.`, "gameOver.jpg");
     }
-});
+}
 
-botonSiguiente.addEventListener('click', function() {
-    encuentro.style.display = 'block';
-    
-    botonSiguiente.style.display = 'none';
-});
+function finalizarAventura(mensaje, imagen = "Ending.jpg") {
+    Swal.fire({
+        icon: 'info',
+        title: mensaje,
+    });
 
-let weapons = ["X", "Gladius", "Excalibur", "Ultima", "Robins", "Yoichi", "Artemis"];
-let wpnAtk = [0, 100, 150, 200, 100, 150, 200];
-let wpnCrit = [0, 10, 15, 20, 10, 15, 20];
+    descripcionAventura.innerHTML = "";
+    imagenAventura.src = `img/${imagen}`;
+    opcionesArmas.innerHTML = '';
 
-const cofres = document.getElementById('cofres');
-const resultadoArma = document.getElementById('resultado-arma');
+    const botonReiniciar = document.createElement('button');
+    botonReiniciar.classList.add('btn', 'btn-success');
+    botonReiniciar.innerText = "Volver a la Cueva.";
+    botonReiniciar.onclick = reiniciarAventura;
+    opcionesArmas.appendChild(botonReiniciar);
+}
 
-botonSiguiente.addEventListener('click', function() {
-    cofres.style.display = 'block';
-});
-
-    cofres.addEventListener('click', function(e) {
-        if (e.target.tagName === 'BUTTON') {
-            let weaponChoise = Number(e.target.getAttribute('data-num'));
-            let mensaje = '';
-        switch (weaponChoise) {
-            case 1:
-                mensaje = `Bien, has recogido ${weapons[1]}, la espada del viejo héroe. Quizás puedas llegar lejos.`;
-                break;
-            case 2:
-                mensaje = `Bien, has recogido ${weapons[2]}, la espada del mito, con ella podrás hacerle frente a lo que viene.`;
-                break;
-            case 3:
-                mensaje = `Bien, has recogido ${weapons[3]}, la espada sagrada. Ve tranquilo, héroe. Los dioses están de tu lado.`;
-                break;
-            case 4:
-                mensaje = `Bien, has recogido ${weapons[4]}, el arco del viejo héroe. Quizás puedas llegar lejos.`;
-                break;
-            case 5:
-                mensaje = `Bien, has recogido ${weapons[5]}, el arco del mito, con él podrás hacerle frente a lo que viene.`;
-                break;
-            case 6:
-                mensaje = `Bien, has recogido ${weapons[6]}, el arco sagrado. Ve tranquilo, héroe. Los dioses están de tu lado.`;
-                break;
-            default:
-                mensaje = 'Número no válido.';
-        }
-        resultadoArma.innerHTML = `<p class="text-success">${mensaje}</p>`;
-
-        cofres.style.display = 'none';
-    }
-});
+function reiniciarAventura() {
+    formulario.style.display = 'block';
+    aventura.style.display = 'none';
+    currentBossIndex = 0;
+}
